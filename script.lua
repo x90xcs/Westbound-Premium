@@ -1,6 +1,19 @@
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- ============================================================================
+-- GLOBAL VARIABLES INITIALIZATION
+-- ============================================================================
+
+_G.ESPEnabled = false
+_G.XRayEnabled = false
+_G.TracersEnabled = false
+_G.NoShadowsEnabled = false
+_G.FlyEnabled = false
+_G.NoClipEnabled = false
+_G.HeadSize = 10
+_G.HitboxesEnabled = false
+
+-- ============================================================================
 -- MAIN WINDOW
 -- ============================================================================
 
@@ -14,18 +27,14 @@ local Window = Rayfield:CreateWindow({
 
    ToggleUIKeybind = "L", 
 
-   DisableRayfieldPrompts = false,
-   DisableBuildWarnings = false, 
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
 
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "WestboundCon",
-      FileName = "Settings"
-   },
-
-   Discord = {
-      Enabled = false,
-   },
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "WestboundCon",
+        FileName = "Settings"
+    },
 
    KeySystem = true,
    KeySettings = {
@@ -349,6 +358,7 @@ _G.HitboxesEnabled = false
 local HitboxesToggle = CombatTab:CreateToggle({
     Name = "Hitboxes",
     CurrentValue = false,
+    Flag = "HitboxesKeybind",
     Callback = function(Value)
         _G.HitboxesEnabled = Value
         
@@ -392,6 +402,17 @@ local HitboxesToggle = CombatTab:CreateToggle({
     end
 })
 
+local HitboxesKeybind = CombatTab:CreateKeybind({
+    Name = "Hitboxes Keybind",
+    CurrentKeybind = "H",
+    HoldToInteract = false,
+    Flag = "HitboxesKeybindKey",
+    Callback = function(Keybind)
+        _G.HitboxesEnabled = not _G.HitboxesEnabled
+        HitboxesToggle:Set(_G.HitboxesEnabled)
+    end,
+})
+
 local HeadSizeSlider = CombatTab:CreateSlider({
     Name = "Hitbox Size",
     Range = {5, 50},
@@ -400,5 +421,85 @@ local HeadSizeSlider = CombatTab:CreateSlider({
     CurrentValue = 10,
     Callback = function(Value)
         _G.HeadSize = Value
+    end
+})
+
+-- =========================
+-- FLY & NOCLIP SECTION (CombatTab)
+-- =========================
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local FlyToggle = CombatTab:CreateToggle({
+    Name = "Fly",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.FlyEnabled = Value
+        if Value then
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                local bodyGyro = Instance.new("BodyGyro")
+                bodyGyro.P = 9e4
+                bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+                bodyGyro.CFrame = hrp.CFrame
+                bodyGyro.Parent = hrp
+
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+                bodyVelocity.Parent = hrp
+
+                _G.FlyConnection = RunService.RenderStepped:Connect(function()
+                    bodyGyro.CFrame = workspace.CurrentCamera.CFrame
+                    local moveVec = Vector3.new()
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + workspace.CurrentCamera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec - workspace.CurrentCamera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec - workspace.CurrentCamera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + workspace.CurrentCamera.CFrame.RightVector end
+                    bodyVelocity.Velocity = moveVec * 50
+                    char.Humanoid.PlatformStand = true
+                end)
+            end
+        else
+            if _G.FlyConnection then _G.FlyConnection:Disconnect() end
+            local char = game.Players.LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                for _, inst in pairs(char.HumanoidRootPart:GetChildren()) do
+                    if inst:IsA("BodyGyro") or inst:IsA("BodyVelocity") then inst:Destroy() end
+                end
+                char.Humanoid.PlatformStand = false
+            end
+        end
+    end
+})
+
+local NoClipToggle = CombatTab:CreateToggle({
+    Name = "NoClip",
+    CurrentValue = false,
+    Callback = function(Value)
+        _G.NoClipEnabled = Value
+        if Value then
+            _G.NoClipConnection = RunService.Stepped:Connect(function()
+                local char = game.Players.LocalPlayer.Character
+                if char then
+                    for _, part in pairs(char:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
+                    end
+                end
+            end)
+        else
+            if _G.NoClipConnection then _G.NoClipConnection:Disconnect() end
+            local char = game.Players.LocalPlayer.Character
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end
     end
 })
