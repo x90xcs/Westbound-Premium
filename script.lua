@@ -4,14 +4,16 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 -- GLOBAL VARIABLES INITIALIZATION
 -- ============================================================================
 
-_G.ESPEnabled = false
-_G.XRayEnabled = false
-_G.TracersEnabled = false
-_G.NoShadowsEnabled = false
-_G.FlyEnabled = false
-_G.NoClipEnabled = false
-_G.HeadSize = 10
-_G.HitboxesEnabled = false
+local ESPEnabled = false
+local XRayEnabled = false
+local TracersEnabled = false
+local NoShadowsEnabled = false
+local FlyEnabled = false
+local NoClipEnabled = false
+local HeadSize = 10
+local HitboxesEnabled = false
+local FlyConnection = nil
+local NoClipConnection = nil
 
 -- ============================================================================
 -- MAIN WINDOW
@@ -53,7 +55,6 @@ local Window = Rayfield:CreateWindow({
 -- ============================================================================
 
 local VisualTab = Window:CreateTab("  Visual  ", 4483362458)
-
 -- ----------------------------------------------------------------------------
 -- Camera Section
 -- ----------------------------------------------------------------------------
@@ -81,7 +82,7 @@ local ESPToggle = VisualTab:CreateToggle({
     Name = "ESP",
     CurrentValue = false,
     Callback = function(Value)
-        _G.ESPEnabled = Value
+        ESPEnabled = Value
         
         -- Function to create ESP for a player
         local function createESP(player)
@@ -137,7 +138,7 @@ local ESPToggle = VisualTab:CreateToggle({
             
             -- Update distance in real-time
             local function updateDistance()
-                while _G.ESPEnabled and character and humanoidRootPart do
+                while ESPEnabled and character and humanoidRootPart do
                     local localChar = game.Players.LocalPlayer.Character
                     if localChar and localChar:FindFirstChild("HumanoidRootPart") then
                         local distance = (humanoidRootPart.Position - localChar.HumanoidRootPart.Position).Magnitude
@@ -176,7 +177,7 @@ local ESPToggle = VisualTab:CreateToggle({
                         createESP(player)
                     end
                     player.CharacterAdded:Connect(function(character)
-                        if _G.ESPEnabled then
+                        if ESPEnabled then
                             wait(1)
                             createESP(player)
                         end
@@ -187,7 +188,7 @@ local ESPToggle = VisualTab:CreateToggle({
             -- Add ESP to new players
             game.Players.PlayerAdded:Connect(function(player)
                 player.CharacterAdded:Connect(function(character)
-                    if _G.ESPEnabled then
+                    if ESPEnabled then
                         wait(1)
                         createESP(player)
                     end
@@ -236,11 +237,11 @@ local TracersToggle = VisualTab:CreateToggle({
     Name = "Tracers",
     CurrentValue = false,
     Callback = function(Value)
-        _G.TracersEnabled = Value
+        TracersEnabled = Value
         
         if Value then
             spawn(function()
-                while _G.TracersEnabled do
+                while TracersEnabled do
                     for _, player in pairs(game.Players:GetPlayers()) do
                         if player ~= game.Players.LocalPlayer and player.Character then
                             local root = player.Character:FindFirstChild("HumanoidRootPart")
@@ -347,29 +348,29 @@ local SkyColorDropdown = VisualTab:CreateDropdown({
 local CombatTab = Window:CreateTab("  Combat  ", 4483362458)
 
 -- ----------------------------------------------------------------------------
--- Rage Section
+-- Hitboxes Section
 -- ----------------------------------------------------------------------------
 
-local RageSection = CombatTab:CreateSection("Rage")
+local HitboxesSection = CombatTab:CreateSection("Hitboxes")
 
-_G.HeadSize = 10
-_G.HitboxesEnabled = false
+local HeadSize = 10
+local HitboxesEnabled = false
 
 local HitboxesToggle = CombatTab:CreateToggle({
     Name = "Hitboxes",
     CurrentValue = false,
     Flag = "HitboxesKeybind",
     Callback = function(Value)
-        _G.HitboxesEnabled = Value
+        HitboxesEnabled = Value
         
         if Value then
             spawn(function()
-                while _G.HitboxesEnabled do
+                while HitboxesEnabled do
                     for i, v in next, game:GetService('Players'):GetPlayers() do
                         if v.Name ~= game:GetService('Players').LocalPlayer.Name then
                             pcall(function()
                                 if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                                    v.Character.HumanoidRootPart.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                                    v.Character.HumanoidRootPart.Size = Vector3.new(HeadSize, HeadSize, HeadSize)
                                     v.Character.HumanoidRootPart.Transparency = 1
                                     v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
                                     v.Character.HumanoidRootPart.Material = "Neon"
@@ -408,8 +409,8 @@ local HitboxesKeybind = CombatTab:CreateKeybind({
     HoldToInteract = false,
     Flag = "HitboxesKeybindKey",
     Callback = function(Keybind)
-        _G.HitboxesEnabled = not _G.HitboxesEnabled
-        HitboxesToggle:Set(_G.HitboxesEnabled)
+        HitboxesEnabled = not HitboxesEnabled
+        HitboxesToggle:Set(HitboxesEnabled)
     end,
 })
 
@@ -420,13 +421,16 @@ local HeadSizeSlider = CombatTab:CreateSlider({
     Suffix = "Size",
     CurrentValue = 10,
     Callback = function(Value)
-        _G.HeadSize = Value
+        HeadSize = Value
     end
 })
 
 -- =========================
 -- FLY & NOCLIP SECTION (CombatTab)
 -- =========================
+
+local FlySection = CombatTab:CreateSection("Fly & NoClip")
+
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
@@ -434,7 +438,7 @@ local FlyToggle = CombatTab:CreateToggle({
     Name = "Fly",
     CurrentValue = false,
     Callback = function(Value)
-        _G.FlyEnabled = Value
+        FlyEnabled = Value
         if Value then
             local char = game.Players.LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
@@ -450,7 +454,7 @@ local FlyToggle = CombatTab:CreateToggle({
                 bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
                 bodyVelocity.Parent = hrp
 
-                _G.FlyConnection = RunService.RenderStepped:Connect(function()
+                FlyConnection = RunService.RenderStepped:Connect(function()
                     bodyGyro.CFrame = workspace.CurrentCamera.CFrame
                     local moveVec = Vector3.new()
                     if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + workspace.CurrentCamera.CFrame.LookVector end
@@ -462,7 +466,7 @@ local FlyToggle = CombatTab:CreateToggle({
                 end)
             end
         else
-            if _G.FlyConnection then _G.FlyConnection:Disconnect() end
+            if FlyConnection then FlyConnection:Disconnect() end
             local char = game.Players.LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
                 for _, inst in pairs(char.HumanoidRootPart:GetChildren()) do
@@ -478,9 +482,9 @@ local NoClipToggle = CombatTab:CreateToggle({
     Name = "NoClip",
     CurrentValue = false,
     Callback = function(Value)
-        _G.NoClipEnabled = Value
+        NoClipEnabled = Value
         if Value then
-            _G.NoClipConnection = RunService.Stepped:Connect(function()
+            NoClipConnection = RunService.Stepped:Connect(function()
                 local char = game.Players.LocalPlayer.Character
                 if char then
                     for _, part in pairs(char:GetDescendants()) do
@@ -491,7 +495,7 @@ local NoClipToggle = CombatTab:CreateToggle({
                 end
             end)
         else
-            if _G.NoClipConnection then _G.NoClipConnection:Disconnect() end
+            if NoClipConnection then NoClipConnection:Disconnect() end
             local char = game.Players.LocalPlayer.Character
             if char then
                 for _, part in pairs(char:GetDescendants()) do
