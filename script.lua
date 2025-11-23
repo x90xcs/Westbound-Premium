@@ -207,31 +207,6 @@ local ESPToggle = VisualTab:CreateToggle({
     end,
 })
 
--- X-Ray in ESP Section
-local XRayToggle = VisualTab:CreateToggle({
-    Name = "X-Ray",
-    CurrentValue = false,
-    Callback = function(Value)
-        if Value then
-            -- Make all parts semi-transparent
-            for _, part in pairs(workspace:GetDescendants()) do
-                if part:IsA("BasePart") and part.Transparency < 0.5 then
-                    part.LocalTransparencyModifier = 0.5
-                end
-            end
-            print("X-Ray Enabled")
-        else
-            -- Restore original transparency
-            for _, part in pairs(workspace:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.LocalTransparencyModifier = 0
-                end
-            end
-            print("X-Ray Disabled")
-        end
-    end
-})
-
 -- Tracers in ESP Section
 local TracersToggle = VisualTab:CreateToggle({
     Name = "Tracers",
@@ -269,6 +244,36 @@ local TracersToggle = VisualTab:CreateToggle({
         end
     end
 })
+
+-- ----------------------------------------------------------------------------
+-- XRay Section
+-- ----------------------------------------------------------------------------
+local XRaySection = VisualTab:CreateSection("XRay")
+
+local XRayToggle = VisualTab:CreateToggle({
+    Name = "X-Ray",
+    CurrentValue = false,
+    Callback = function(Value)
+        if Value then
+            -- Make all parts semi-transparent
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") and part.Transparency < 0.5 then
+                    part.LocalTransparencyModifier = 0.5
+                end
+            end
+            print("X-Ray Enabled")
+        else
+            -- Restore original transparency
+            for _, part in pairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.LocalTransparencyModifier = 0
+                end
+            end
+            print("X-Ray Disabled")
+        end
+    end
+})
+
 
 -- ----------------------------------------------------------------------------
 -- FPS Section
